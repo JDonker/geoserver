@@ -289,18 +289,7 @@ public class GetMapKvpRequestReader extends KvpRequestReader implements Disposab
     @Override
     public GetMapRequest createRequest() throws Exception {
         GetMapRequest request = new GetMapRequest();
-        HttpServletRequest httpRequest =
-                Optional.ofNullable(Dispatcher.REQUEST.get())
-                        .map(r -> r.getHttpRequest())
-                        .orElse(null);
-        if (httpRequest != null) {
-            request.setRequestCharset(httpRequest.getCharacterEncoding());
-            request.setGet("GET".equalsIgnoreCase(httpRequest.getMethod()));
-            List<String> headerNames = EnumerationUtils.toList(httpRequest.getHeaderNames());
-            for (String headerName : headerNames) {
-                request.putHttpRequestHeader(headerName, httpRequest.getHeader(headerName));
-            }
-        }
+        request.addRequestParameters();
         return request;
     }
 

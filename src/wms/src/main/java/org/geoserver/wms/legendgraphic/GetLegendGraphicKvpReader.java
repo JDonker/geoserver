@@ -13,10 +13,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -25,6 +22,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.commons.lang.StringUtils;
 import org.geoserver.catalog.CoverageInfo;
 import org.geoserver.catalog.LayerGroupHelper;
 import org.geoserver.catalog.LayerGroupInfo;
@@ -238,6 +237,14 @@ public class GetLegendGraphicKvpReader extends KvpRequestReader {
 
         return request;
     }
+
+    @Override
+    public GetLegendGraphicRequest createRequest() throws Exception {
+        GetLegendGraphicRequest request = new GetLegendGraphicRequest();
+        request.addRequestParameters();
+        return request;
+    }
+
 
     private List<LayerInfo> getLayerGroupLayers(String styleName, LayerGroupInfo layerGroup) {
         List<LayerInfo> layers = null;
@@ -500,7 +507,11 @@ public class GetLegendGraphicKvpReader extends KvpRequestReader {
             if (LOGGER.isLoggable(Level.FINER)) {
                 LOGGER.finer("taking style from SLD parameter");
             }
-            addStylesFrom(sldStyles, styleNames, loadRemoteStyle(sldUrl));
+            addStylesFrom(
+                    sldStyles,
+                    styleNames,
+                    loadRemoteStyle(sldUrl, req.getHttpRequestHeader("Authorization")));
+
 
         } else if (sldBody != null) {
             if (LOGGER.isLoggable(Level.FINER)) {
@@ -722,16 +733,24 @@ public class GetLegendGraphicKvpReader extends KvpRequestReader {
     /**
      * Loads a remote SLD document and parses it to a Style object
      *
+     * @param authorizationHeader string containing the value of the authorization header of the
+     * incoming request
      * @param sldUrl an URL to a SLD document
      * @return the document parsed to a Style object
      * @throws WmsException if <code>sldUrl</code> is not a valid URL, a stream can't be opened or a
      *     parsing error occurs
      */
-    private Style[] loadRemoteStyle(String sldUrl) throws ServiceException {
+    protected Style[] loadRemoteStyle(String sldUrl, String authorizationHeader)
+            throws ServiceException, IOException {
         try {
             URLCheckers.confirm(sldUrl);
             URL url = new URL(sldUrl);
-            try (InputStream in = url.openStream()) {
+            URLConnection urlConnection = url.openConnection();
+            if (StringUtils.isNotBlank(authorizationHeader) && isAllowedURL(url)) {
+                urlConnection.setRequestProperty("Authorization", authorizationHeader);
+            }
+            try (InputStream in = urlConnection.getInputStream()) {
+
                 return parseSld(new InputStreamReader(in));
             }
         } catch (MalformedURLException e) {
@@ -743,6 +762,16 @@ public class GetLegendGraphicKvpReader extends KvpRequestReader {
             throw new ServiceException(e, "Can't open the SLD URL " + sldUrl, "loadRemoteStyle");
         }
     }
+
+    /**
+     * @param styleUrl an URL to a SLD document
+     * @return if the authorization header should be set for the given url
+     */
+    protected boolean isAllowedURL(URL styleUrl) {
+        String url = styleUrl.toString();
+        return wms.getAllowedURLsForAuthForwarding().stream().anyMatch(s -> url.startsWith(s));
+    }
+
 
     /**
      * Parses a SLD Style from a xml string

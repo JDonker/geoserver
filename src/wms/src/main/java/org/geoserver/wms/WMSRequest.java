@@ -5,8 +5,16 @@
  */
 package org.geoserver.wms;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
+import org.apache.commons.collections.EnumerationUtils;
 import org.geoserver.ows.Dispatcher;
+import org.geoserver.ows.util.CaseInsensitiveMap;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * Defines a general Request type and provides accessor methods for universal request information.
@@ -32,6 +40,8 @@ public abstract class WMSRequest {
     protected String version;
 
     private String requestCharset;
+
+    private Map<String, String> httpRequestHeaders;
 
     /**
      * Creates the new request with the given operation name
@@ -105,4 +115,43 @@ public abstract class WMSRequest {
     public void setRequestCharset(String requestCharset) {
         this.requestCharset = requestCharset;
     }
+
+    public String getHttpRequestHeader(String headerName) {
+        return httpRequestHeaders == null ? null : httpRequestHeaders.get(headerName);
+    }
+
+    public void putHttpRequestHeader(String headerName, String value) {
+        if (httpRequestHeaders == null) {
+            httpRequestHeaders = new CaseInsensitiveMap<>(new HashMap<>());
+        }
+        httpRequestHeaders.put(headerName, value);
+    }
+
+    public Map<String, String> getHttpRequestHeaders() {
+        return this.httpRequestHeaders;
+    }
+
+    public void addRequestParameters() {
+        HttpServletRequest httpRequest =
+                Optional.ofNullable(Dispatcher.REQUEST.get())
+                        .map(r -> r.getHttpRequest())
+                        .orElse(null);
+        if (httpRequest != null) {
+            this.setRequestCharset(httpRequest.getCharacterEncoding());
+            this.setGet("GET".equalsIgnoreCase(httpRequest.getMethod()));
+            List<String> headerNames = EnumerationUtils.toList(httpRequest.getHeaderNames());
+            for (String headerName : headerNames) {
+                this.putHttpRequestHeader(headerName, httpRequest.getHeader(headerName));
+            }
+        }
+    }
+
+    public void addRequestParameters(Map<String, String> httpRequestHeaders) {
+        if (httpRequestHeaders != null) {
+            for (Map.Entry<String, String> headerName : httpRequestHeaders.entrySet()) {
+                this.putHttpRequestHeader(headerName.getKey(), headerName.getValue());
+            }
+        }
+    }
+
 }

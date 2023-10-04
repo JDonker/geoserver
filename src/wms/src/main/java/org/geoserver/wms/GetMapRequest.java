@@ -61,8 +61,6 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
     /** sql view parameters */
     private List<Map<String, String>> viewParams = null;
 
-    private Map<String, String> httpRequestHeaders;
-
     public GetMapRequest() {
         super("GetMap");
     }
@@ -784,17 +782,6 @@ public class GetMapRequest extends WMSRequest implements Cloneable {
 
         // returnString.append("\n inside: " + filter.toString());
         return returnString.toString();
-    }
-
-    public String getHttpRequestHeader(String headerName) {
-        return httpRequestHeaders == null ? null : httpRequestHeaders.get(headerName);
-    }
-
-    public void putHttpRequestHeader(String headerName, String value) {
-        if (httpRequestHeaders == null) {
-            httpRequestHeaders = new CaseInsensitiveMap<>(new HashMap<>());
-        }
-        httpRequestHeaders.put(headerName, value);
     }
 
     @Override

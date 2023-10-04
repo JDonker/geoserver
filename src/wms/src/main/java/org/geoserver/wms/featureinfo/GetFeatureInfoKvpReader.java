@@ -112,6 +112,14 @@ public class GetFeatureInfoKvpReader extends KvpRequestReader {
         return wms;
     }
 
+    @Override
+    public Object createRequest() throws Exception {
+        GetFeatureInfoRequest getFeatureInfoRequest = new GetFeatureInfoRequest();
+        getFeatureInfoRequest.addRequestParameters();
+        return getFeatureInfoRequest;
+    }
+
+
     @SuppressWarnings("unchecked")
     @Override
     public Object read(Object req, Map kvp, Map rawKvp) throws Exception {
@@ -119,6 +127,7 @@ public class GetFeatureInfoKvpReader extends KvpRequestReader {
         request.setRawKvp(rawKvp);
 
         GetMapRequest getMapPart = new GetMapRequest();
+        getMapPart.addRequestParameters(request.getHttpRequestHeaders());
         try {
             getMapPart = getMapReader.read(getMapPart, kvp, rawKvp);
         } catch (ServiceException se) {
